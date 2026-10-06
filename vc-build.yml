@@ -1,0 +1,55 @@
+name: Saffron VC APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install SDK
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;27.2.12479018" \
+            "cmake;3.22.1"
+
+      - name: Download Engine
+        run: |
+          git clone --depth 1 \
+            https://github.com/The-unknown-Shadowman/PocketTTS-Android-Engine.git \
+            engine
+
+      - name: Prepare Engine
+        working-directory: engine
+        run: |
+          chmod +x scripts/prepare_android_native_deps.sh
+          ./scripts/prepare_android_native_deps.sh
+
+      - name: Build APK
+        working-directory: engine
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Saffron-VC-APK
+          path: engine/app/build/outputs/apk/debug/app-debug.apk
